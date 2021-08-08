@@ -1,11 +1,14 @@
-local GUI = {}
+GUI = {}
 
 local component = require("component")
-local gpu = component.gpu
-local w,h = gpu.getResolution()
+gpu = component.gpu
+w,h = gpu.getResolution()
 
-widgets = {}
+GUI.black = 0x000000
+GUI.white = 0xFFFFFF
 
+
+pages = {}
 
 function GUI.Label(page,x,y,text,colour,updateFunc)
     local self = {}
@@ -15,12 +18,19 @@ function GUI.Label(page,x,y,text,colour,updateFunc)
     self.text = text
     self.colour = colour
     self.updateFunc = updateFunc
-    table.insert(page.labels,self)
+    table.insert(page.labels.widgets,self)
     return self
 end
 
+function GUI.Page()
+    local self = {}
+    self.name = {}
+    self.widgets = {}
+    table.insert(pages,)
+    return self
+end
 function GUI.ClearScreen()
-    gpu.setBackground(white)
+    gpu.setBackground(GUI.black)
     gpu.fill(1,1,w,h," ")
 end
 
