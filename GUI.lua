@@ -1,6 +1,7 @@
 GUI = {}
 
-local component = require("component")
+component = require("component")
+event = require("event")
 gpu = component.gpu
 w,h = gpu.getResolution()
 
@@ -13,7 +14,7 @@ GUI.red = 0xFF0000
 pages = {}
 currentPage = nil
 
-e
+
 
 function GUI.Label(page,x,y,text,colour,updateFunc)
     local self = {}
@@ -27,13 +28,16 @@ function GUI.Label(page,x,y,text,colour,updateFunc)
     return self
 end
 
-function GUI.Bar(page,x,y,width,height,getValue)
+function GUI.Bar(page,x,y,barWidth,barHeight,barSpace,vertical,bars,getValue)
     local self = {}
     self.draw = DrawBar
     self.x = x
     self.y = y
-    self.width = width
-    self.height = height
+    self.barWidth = barWidth
+    self.barHeight = barHeight
+    self.barSpace = barSpace
+    self.vertical = vertical
+    self.bars = bars
     self.getValue = getValue
     table.insert(page.widgets,self)
     return self
@@ -53,6 +57,15 @@ function GUI.Button(page,x,y,width,height,text,centered,OnPress)
     return self
 end
 
+function GUI.Border(pos1,pos2,width,colour)
+    local self = {}
+    self.draw = DrawBorder
+    self.x = x
+    self.y = y
+    table.insert(page.widgets,self)
+    return self
+end
+
 function GUI.SetPage(page)
     currentPage = page
 end
@@ -63,7 +76,6 @@ function GUI.Page(set)
     self.widgets = {}
     table.insert(pages,self)
     if set then GUI.SetPage(self) end
-    print(self)
     return self
 end
 function GUI.ClearScreen()
@@ -80,23 +92,28 @@ end
 
 function DrawBar(bar)
     gpu.setBackground(GUI.red)
-    local value = bar.getValue()
-    gpu.fill(bar.x,bar.y,bar.width*value,bar.height," ")
-    gpu.setBackground(GUI.white)
-    gpu.fill(bar.x + bar.width*value,bar.y,(1-value)*bar.width,bar.height," ")
+    local filled = math.floor(bar.bars*bar.value+0.5);
+    for i=1,filled,1 do
+        if bar.vertical then
+            gpu.fill(bar.x,(bar.y-i*(bar.barSpace+bar.barHeight))+bar.barHeight,bar.barWidth,bar.barHeight," ")
+        else
+            --gpu.fill(bar.x+i*(bar.barSpace+bar.barWidth),bar.y,bar.x+i*(bar.barSpace+bar.barWidth)+bar.barWidth,bar.y+bar.barHeight)
+        end
+    end
+
 end
 
 function DrawButton(button)
     gpu.setBackground(GUI.white)
     gpu.fill(button.x,button.y,button.width,button.height," ")
-    if button.centered then local x = (button.width - #button.text)*0.5 else local x = button.x+1 end
-    gpu.set(x,button.y/2+0.5,button.text)
+    if button.centered then x = button.x+(button.width - #button.text)*0.5 else x = button.x+1 end
+    gpu.setForeground(GUI.black)
+    gpu.set(x,button.y+button.height/2+0.5,button.text)
 end
 
-function OnClick(address,x,y,button)
-    if button == nil then return end
-
-    for _,widget in ipairs(widgets) do
+function OnClick(_,address,x,y,button)
+    if button ~= 1 then return end
+    for _,widget in ipairs(currentPage.widgets) do
         if widget.OnPress ~= nil then
             if x>=widget.x and y>= widget.y and x<=widget.x+widget.width and y <= widget.y + widget.height then
                 widget.OnPress()
@@ -106,11 +123,23 @@ function OnClick(address,x,y,button)
 end
 
 function GUI.Draw()
-    UI.ClearScreen()
+    for _,widget in ipairs(currentPage.widgets) do
+        if widget.getValue ~= nil then widget.value = widget.getValue() end
+    end
+    GUI.ClearScreen()
     for _,widget in ipairs(currentPage.widgets) do
         widget.draw(widget)
     end
 end
+
+function GUI.Close()
+    event.cancel(touchEvent)
+    gpu.setBackground(GUI.black)
+    gpu.setForeground(GUI.white)
+    GUI.ClearScreen()
+end
+
+touchEvent = event.listen("touch",OnClick)
 
 
 return GUI
